@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern URL Shortener</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <style>
+        :root {
+            --primary: #7F5A83;      /* Soft purple */
+            --secondary: #A188A6;    /* Light purple */
+            --accent: #9BA17F;       /* Sage green */
+            --success: #95B8A6;      /* Muted green */
+            --error: #E6A4A4;        /* Soft red */
+            --background-start: #FCF7FF;  /* Light cream */
+            --background-end: #F5E6E8;    /* Soft pink */
+            --text: #5D4954;         /* Deep mauve */
+            --text-light: #8E7F85;   /* Light mauve */
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--background-start), var(--background-end));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            padding: 24px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 8px 32px rgba(127, 90, 131, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 32px;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid rgba(127, 90, 131, 0.1);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            color: var(--text);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--secondary);
+            background: white;
+            box-shadow: 0 4px 12px rgba(127, 90, 131, 0.1);
+        }
+
+        input::placeholder {
+            color: var(--text-light);
+            opacity: 0.6;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(127, 90, 131, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .result-container {
+            margin-top: 24px;
+            padding: 24px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            display: none;
+            border: 1px solid rgba(127, 90, 131, 0.1);
+        }
+
+        .result-container.show {
+            display: block;
+            animation: slideUp 0.5s ease forwards;
+        }
+
+        .shortened-url {
+            word-break: break-all;
+            margin-bottom: 16px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            font-family: monospace;
+            color: var(--primary);
+            border: 1px solid rgba(127, 90, 131, 0.1);
+        }
+
+        .copy-button {
+            background: linear-gradient(135deg, var(--accent), var(--success));
+        }
+
+        .error-message {
+            color: var(--error);
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            width: 48px;
+            height: 48px;
+            margin: 24px auto;
+            border: 4px solid rgba(127, 90, 131, 0.1);
+            border-left-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .notification {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            padding: 16px 24px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent), var(--success));
+            color: white;
+            transform: translateX(200%);
+            transition: transform 0.3s ease;
+            box-shadow: 0 4px 12px rgba(149, 184, 166, 0.2);
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .footnote {
+            text-align: center;
+            margin-top: 32px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .footnote a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .footnote a:hover {
+            text-decoration: underline;
+        }
+
+        .link-container {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .link-container a {
+            font-size: 1.1rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .link-container a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>URL Shortener by <a href="https:roll.nimd.xyz" target="blank">NiMD</a></h1>
+        
+        <form id="shortener-form">
+            <div class="form-group">
+                <label for="long-url">Enter your long URL</label>
+                <input
+                    type="url"
+                    id="long-url"
+                    placeholder="https://example.com/very-long-url"
+                    required
+                />
+            </div>
+            
+            <div class="form-group">
+                <label for="custom-alias">Custom alias (optional)</label>
+                <input
+                    type="text"
+                    id="custom-alias"
+                    placeholder="my-custom-url"
+                    pattern="[a-zA-Z0-9-]+"
+                    title="Only letters, numbers, and hyphens are allowed"
+                />
+            </div>
+
+            <button type="submit">Shorten URL</button>
+        </form>
+
+        <div class="loading" id="loading"></div>
+
+        <div class="result-container" id="result">
+            <div class="shortened-url" id="shortened-url"></div>
+            <button class="copy-button" id="copy-button">Copy to Clipboard</button>
+        </div>
+
+        <div class="link-container">
+            <a href="lookup/lookup.html" target="_blank">Go to URL Lookup Page</a>
+        </div>
+    </div>
+
+    <div class="notification" id="notification">URL copied to clipboard!</div>
+
+    <div class="footnote">
+        Made with love, by <a href="https://nimd.xyz" target="_blank">MD</a>. Using <a href="https://is.gd/apishorteningreference.php" target="_blank">is.gd</a> API.
+    </div>
+
+    <script>
+        const form = document.getElementById('shortener-form');
+        const loading = document.getElementById('loading');
+        const result = document.getElementById('result');
+        const shortenedUrl = document.getElementById('shortened-url');
+        const copyButton = document.getElementById('copy-button');
+        const notification = document.getElementById('notification');
+
+        function showLoading() {
+            loading.style.display = 'block';
+            result.classList.remove('show');
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        function showResult(url) {
+            shortenedUrl.textContent = url;
+            result.classList.add('show');
+        }
+
+        function showNotification() {
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function validateUrl(url) {
+            try {
+                new URL(url);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const longUrl = document.getElementById('long-url').value;
+            const customAlias = document.getElementById('custom-alias').value;
+
+            if (!validateUrl(longUrl)) {
+                alert('Please enter a valid URL');
+                return;
+            }
+
+            showLoading();
+
+            let apiUrl = `https://is.gd/create.php?format=json&url=${encodeURIComponent(longUrl)}`;
+            if (customAlias) {
+                apiUrl += `&shorturl=${encodeURIComponent(customAlias)}`;
+            }
+
+            try {
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+
+                hideLoading();
+
+                if (data.shorturl) {
+                    showResult(data.shorturl);
+                    gsap.from(result, {
+                        y: 20,
+                        opacity: 0,
+                        duration: 0.5,
+                        ease: "power2.out"
+                    });
+                } else {
+                    throw new Error('Custom alias unavailable. Choose another one');
+                }
+            } catch (error) {
+                hideLoading();
+                alert(error.message || 'An error occurred while shortening the URL');
+            }
+        });
+
+        copyButton.addEventListener('click', () => {
+            navigator.clipboard.writeText(shortenedUrl.textContent)
+                .then(() => {
+                    showNotification();
+                })
+                .catch(() => {
+                    alert('Failed to copy URL');
+                });
+        });
+    </script>
+</body>
+</html>
