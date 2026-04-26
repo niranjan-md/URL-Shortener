@@ -1,254 +1,333 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // DOM elements
+    // DOM Elements
     const themeSwitch = document.getElementById('theme-switch');
-    const urlForm = document.getElementById('url-form');
-    const lookupForm = document.getElementById('lookup-form');
-    const longUrlInput = document.getElementById('long-url');
-    const shortUrlInput = document.getElementById('short-url');
-    const customAliasToggle = document.getElementById('custom-alias-toggle');
-    const customAliasInput = document.getElementById('custom-alias');
-    const customAliasDiv = document.querySelector('.custom-alias');
-    const resultContainer = document.querySelector('.result-container');
-    const lookupResultContainer = document.querySelector('.lookup-result-container');
-    const shortenedUrl = document.getElementById('shortened-url');
-    const originalUrl = document.getElementById('original-url');
-    const copyBtn = document.getElementById('copy-btn');
-    const copyOriginalBtn = document.getElementById('copy-original-btn');
-    const copyToast = document.getElementById('copy-toast');
-    const errorContainer = document.querySelector('.error-container');
-    const lookupErrorContainer = document.querySelector('.lookup-error-container');
-    const errorText = document.getElementById('error-text');
-    const lookupErrorText = document.getElementById('lookup-error-text');
-    const loader = document.querySelector('.loader');
-    const lookupLoader = document.querySelector('.lookup-loader');
-    const creationDate = document.getElementById('creation-date');
-    const totalClicks = document.getElementById('total-clicks');
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
+    
+    // Shorten Form Elements
+    const urlForm = document.getElementById('url-form');
+    const longUrlInput = document.getElementById('long-url');
+    const customAliasToggle = document.getElementById('custom-alias-toggle');
+    const aliasWrapper = document.getElementById('alias-wrapper');
+    const customAliasInput = document.getElementById('custom-alias');
+    const servicePrefix = document.getElementById('service-prefix');
     const serviceRadios = document.querySelectorAll('input[name="service"]');
+    
+    // Shorten Result Elements
+    const shortenLoader = document.getElementById('shorten-loader');
+    const shortenResult = document.getElementById('shorten-result');
+    const shortenError = document.getElementById('shorten-error');
+    const errorText = document.getElementById('error-text');
+    const shortenedUrl = document.getElementById('shortened-url');
+    const qrCodeContainer = document.getElementById('qrcode');
+    
+    // Lookup Elements
+    const lookupForm = document.getElementById('lookup-form');
+    const shortUrlInput = document.getElementById('short-url');
+    const lookupLoader = document.getElementById('lookup-loader');
+    const lookupResult = document.getElementById('lookup-result');
+    const lookupError = document.getElementById('lookup-error');
+    const lookupErrorText = document.getElementById('lookup-error-text');
+    const originalUrl = document.getElementById('original-url');
+    
+    // History & Utility Elements
+    const toast = document.getElementById('toast');
+    const historyContainer = document.getElementById('history-container');
+    const historyList = document.getElementById('history-list');
+    const clearHistoryBtn = document.getElementById('clear-history');
 
-    // Initialize theme
-    if (localStorage.getItem('darkTheme') === 'true') {
-        document.body.classList.add('dark-theme');
-        themeSwitch.checked = true;
-    }
+    // State
+    let qrCodeInstance = null;
+    let linkHistory = JSON.parse(localStorage.getItem('tinyLinksHistory')) || [];
 
-    // Initialize selected service
-    const savedService = localStorage.getItem('selectedService');
-    if (savedService) {
-        document.querySelector(`input[value="${savedService}"]`).checked = true;
-    }
+    // --- Initialization ---
+    initTheme();
+    renderHistory();
+    setupRippleEffect();
 
-    // Theme toggle
+    // --- Event Listeners ---
+    
+    // Theme Toggle
     themeSwitch.addEventListener('change', function() {
         document.body.classList.toggle('dark-theme');
         localStorage.setItem('darkTheme', document.body.classList.contains('dark-theme'));
     });
 
-    // Service selection
-    serviceRadios.forEach(radio => {
-        radio.addEventListener('change', function() {
-            localStorage.setItem('selectedService', this.value);
-        });
-    });
-
-    // Tab switching
+    // Tab Switching
     tabBtns.forEach(btn => {
         btn.addEventListener('click', function() {
-            const tabName = this.dataset.tab;
-            
-            // Change active button
-            tabBtns.forEach(btn => btn.classList.remove('active'));
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabContents.forEach(c => c.classList.remove('active'));
             this.classList.add('active');
-            
-            // Show active content
-            tabContents.forEach(content => content.classList.remove('active'));
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.getElementById(`${this.dataset.tab}-tab`).classList.add('active');
         });
     });
 
-    // Custom alias toggle
+    // Custom Alias Toggle & Smooth Animation
     customAliasToggle.addEventListener('change', function() {
-        customAliasDiv.style.display = this.checked ? 'block' : 'none';
-        if (!this.checked) {
+        if (this.checked) {
+            aliasWrapper.classList.add('open');
+            customAliasInput.focus();
+        } else {
+            aliasWrapper.classList.remove('open');
             customAliasInput.value = '';
         }
     });
 
-    // URL Shortening Form
+    // Update prefix when switching services
+    serviceRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            let val = this.value;
+            if(val === 'tinyurl') val = 'tinyurl.com';
+            servicePrefix.textContent = val + '/';
+        });
+    });
+
+    // --- Shorten Logic ---
     urlForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Reset previous results
-        errorContainer.style.display = 'none';
-        resultContainer.style.display = 'none';
-        loader.style.display = 'block';
+        // Reset UI Safely
+        shortenError.style.display = 'none';
+        shortenResult.style.display = 'none';
+        shortenLoader.style.display = 'flex';
         
-        // Get form values
-        const longUrl = longUrlInput.value.trim();
+        let longUrl = longUrlInput.value.trim();
         const customAlias = customAliasToggle.checked ? customAliasInput.value.trim() : '';
         const selectedService = document.querySelector('input[name="service"]:checked').value;
         
+        // Auto-prepend https:// if missing
+        if (!/^https?:\/\//i.test(longUrl)) {
+            longUrl = 'https://' + longUrl;
+        }
+        
         try {
-            // Input validation
-            if (!isValidUrl(longUrl)) {
-                throw new Error('Please enter a valid URL starting with http:// or https://');
-            }
+            if (!isValidUrl(longUrl)) throw new Error('Please enter a valid URL.');
             
-            if (customAlias && !/^[A-Za-z0-9_-]+$/.test(customAlias)) {
-                throw new Error('Custom alias can only contain letters, numbers, hyphens, and underscores');
+            let finalShortUrl = "";
+
+            if (selectedService === 'tinyurl') {
+                let apiUrl = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`;
+                if (customAlias) apiUrl += `&alias=${encodeURIComponent(customAlias)}`;
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('Alias might be taken or TinyURL failed.');
+                const textResult = await response.text();
+                
+                if (textResult.startsWith('http')) {
+                    finalShortUrl = textResult;
+                } else {
+                    throw new Error('Failed to generate TinyURL.');
+                }
+            } 
+            else {
+                let apiUrl = `https://${selectedService}/create.php?format=json&url=${encodeURIComponent(longUrl)}`;
+                if (customAlias) apiUrl += `&shorturl=${encodeURIComponent(customAlias)}`;
+                
+                const response = await fetch(apiUrl);
+                const data = await response.json();
+                
+                if (data.shorturl) {
+                    finalShortUrl = data.shorturl;
+                } else if (data.errormessage) {
+                    throw new Error(data.errormessage);
+                } else {
+                    throw new Error(`Service error via ${selectedService}`);
+                }
             }
+
+            // Success Handler
+            shortenedUrl.textContent = finalShortUrl;
+            shortenedUrl.href = finalShortUrl;
+            generateQRCode(finalShortUrl);
+            saveToHistory(longUrl, finalShortUrl);
             
-            // Build API URL
-            let apiUrl = `https://${selectedService}/create.php?format=json&url=${encodeURIComponent(longUrl)}`;
-            if (customAlias) {
-                apiUrl += `&shorturl=${encodeURIComponent(customAlias)}`;
-            }
-            
-            // Fetch shortened URL
-            const response = await fetch(apiUrl);
-            const data = await response.json();
-            
-            if (data.shorturl) {
-                shortenedUrl.textContent = data.shorturl;
-                shortenedUrl.href = data.shorturl;
-                resultContainer.style.display = 'block';
-            } else if (data.errorcode) {
-                throw new Error(data.errormessage || `An error occurred while shortening the URL with ${selectedService}`);
-            } else {
-                throw new Error(`Unknown error occurred with ${selectedService}`);
-            }
+            shortenResult.style.display = 'block';
+            longUrlInput.value = ''; 
             
         } catch (error) {
-            errorText.textContent = error.message;
-            errorContainer.style.display = 'block';
+            let errorMsg = error.message;
+            if (errorMsg === "Failed to fetch") {
+                errorMsg = "Network error. Please check your connection or disable adblockers.";
+            }
+            errorText.textContent = errorMsg;
+            shortenError.style.display = 'flex';
         } finally {
-            loader.style.display = 'none';
+            shortenLoader.style.display = 'none';
         }
     });
 
-    // Lookup Form
+    // --- Lookup Logic ---
     lookupForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Reset previous results
-        lookupErrorContainer.style.display = 'none';
-        lookupResultContainer.style.display = 'none';
-        lookupLoader.style.display = 'block';
+        lookupError.style.display = 'none';
+        lookupResult.style.display = 'none';
+        lookupLoader.style.display = 'flex';
         
-        // Get form values
-        const shortUrl = shortUrlInput.value.trim();
+        let shortUrl = shortUrlInput.value.trim();
+        if (!/^https?:\/\//i.test(shortUrl)) shortUrl = 'https://' + shortUrl;
         
         try {
-            // Input validation
-            if (!isValidShortUrl(shortUrl)) {
-                throw new Error('Please enter a valid v.gd or is.gd URL');
+            const parsedUrl = new URL(shortUrl);
+            if (!['v.gd', 'is.gd'].includes(parsedUrl.hostname)) {
+                throw new Error('Only is.gd or v.gd links are supported for lookup currently.');
             }
             
-            // Determine which service to use based on the URL
-            const urlObj = new URL(shortUrl);
-            const service = urlObj.hostname;
-            
-            // Build API URL for lookup
+            const service = parsedUrl.hostname;
             const apiUrl = `https://${service}/forward.php?format=json&shorturl=${encodeURIComponent(shortUrl)}`;
             
-            // Fetch original URL
             const response = await fetch(apiUrl);
             const data = await response.json();
             
             if (data.url) {
                 originalUrl.textContent = data.url;
                 originalUrl.href = data.url;
-                
-                // Display additional info if available
-                if (data.created) {
-                    const date = new Date(data.created * 1000);
-                    creationDate.textContent = `Created: ${date.toLocaleString()}`;
-                    creationDate.style.display = 'block';
-                } else {
-                    creationDate.style.display = 'none';
-                }
-                
-                if (data.total_clicks !== undefined) {
-                    totalClicks.textContent = `Total Clicks: ${data.total_clicks}`;
-                    totalClicks.style.display = 'block';
-                } else {
-                    totalClicks.style.display = 'none';
-                }
-                
-                lookupResultContainer.style.display = 'block';
-            } else if (data.errorcode) {
-                throw new Error(data.errormessage || `An error occurred while looking up the URL with ${service}`);
+                lookupResult.style.display = 'block';
             } else {
-                throw new Error(`Unknown error occurred with ${service}`);
+                throw new Error(data.errormessage || 'URL not found or invalid.');
             }
-            
         } catch (error) {
-            lookupErrorText.textContent = error.message;
-            lookupErrorContainer.style.display = 'block';
+            let errorMsg = error.message;
+            if (errorMsg === "Failed to fetch") errorMsg = "Network error. Make sure the URL is correct.";
+            lookupErrorText.textContent = errorMsg || 'Invalid URL format.';
+            lookupError.style.display = 'flex';
         } finally {
             lookupLoader.style.display = 'none';
         }
     });
 
-    // Copy buttons
-    copyBtn.addEventListener('click', function() {
-        copyToClipboard(shortenedUrl.textContent);
+    // --- Enhanced Copy Handlers ---
+    document.getElementById('copy-btn').addEventListener('click', function() { 
+        copyText(shortenedUrl.textContent, this); 
     });
     
-    copyOriginalBtn.addEventListener('click', function() {
-        copyToClipboard(originalUrl.textContent);
+    document.getElementById('copy-original-btn').addEventListener('click', function() { 
+        copyText(originalUrl.textContent, this); 
     });
 
-    // Helper functions
-    function isValidUrl(url) {
-        try {
-            const parsedUrl = new URL(url);
-            return ['http:', 'https:'].includes(parsedUrl.protocol);
-        } catch (e) {
-            return false;
-        }
-    }
-    
-    function isValidShortUrl(url) {
-        try {
-            const parsedUrl = new URL(url);
-            return ['http:', 'https:'].includes(parsedUrl.protocol) &&
-                  (parsedUrl.hostname === 'v.gd' || parsedUrl.hostname === 'is.gd');
-        } catch (e) {
-            return false;
-        }
-    }
-    
-    async function copyToClipboard(text) {
+    async function copyText(text, btnElement) {
+        if (!text) return;
         try {
             await navigator.clipboard.writeText(text);
-            showCopyToast();
-        } catch (err) {
-            // Fallback for browsers that don't support clipboard API
-            const textArea = document.createElement('textarea');
-            textArea.value = text;
-            textArea.style.position = 'fixed';
-            document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
+            showToast();
             
-            try {
-                document.execCommand('copy');
-                showCopyToast();
-            } catch (err) {
-                console.error('Failed to copy: ', err);
-                alert('Failed to copy to clipboard');
+            // Inline visual confirmation on the button itself
+            if (btnElement) {
+                const icon = btnElement.querySelector('i');
+                if (icon) {
+                    const originalClass = icon.className;
+                    icon.className = 'fas fa-check';
+                    icon.style.color = 'var(--success)';
+                    
+                    setTimeout(() => {
+                        icon.className = originalClass;
+                        icon.style.color = '';
+                    }, 2000);
+                }
             }
-            
-            document.body.removeChild(textArea);
+        } catch (err) {
+            console.error('Failed to copy', err);
         }
     }
-    
-    function showCopyToast() {
-        copyToast.classList.add('show');
-        setTimeout(() => {
-            copyToast.classList.remove('show');
-        }, 2000);
+
+    // --- Helper Functions ---
+    function initTheme() {
+        if (localStorage.getItem('darkTheme') === 'true' || 
+            (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches && !localStorage.getItem('darkTheme'))) {
+            document.body.classList.add('dark-theme');
+            themeSwitch.checked = true;
+        }
     }
+
+    function isValidUrl(string) {
+        try { new URL(string); return true; } catch (_) { return false; }
+    }
+
+    function generateQRCode(url) {
+        qrCodeContainer.innerHTML = ''; 
+        qrCodeInstance = new QRCode(qrCodeContainer, {
+            text: url,
+            width: 100,
+            height: 100,
+            colorDark : "#2c2f33", 
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.M
+        });
+    }
+
+    function showToast() {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function setupRippleEffect() {
+        document.querySelectorAll('.btn-animate').forEach(btn => {
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            
+            newBtn.addEventListener('click', function(e) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const ripple = document.createElement('span');
+                ripple.className = 'ripple';
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y}px`;
+                
+                this.appendChild(ripple);
+                setTimeout(() => ripple.remove(), 600);
+            });
+        });
+    }
+
+    // --- History Functions ---
+    function saveToHistory(longUrl, shortUrl) {
+        linkHistory = linkHistory.filter(item => item.shortUrl !== shortUrl);
+        linkHistory.unshift({ longUrl, shortUrl });
+        
+        if (linkHistory.length > 5) linkHistory.pop();
+        
+        localStorage.setItem('tinyLinksHistory', JSON.stringify(linkHistory));
+        renderHistory();
+    }
+
+    function renderHistory() {
+        if (linkHistory.length === 0) {
+            historyContainer.style.display = 'none';
+            return;
+        }
+
+        historyContainer.style.display = 'block';
+        historyList.innerHTML = '';
+
+        linkHistory.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div class="history-links">
+                    <a href="${item.shortUrl}" target="_blank" class="history-short">${item.shortUrl}</a>
+                    <span class="history-long" title="${item.longUrl}">${item.longUrl}</span>
+                </div>
+                <button class="icon-btn btn-animate copy-history-btn" data-url="${item.shortUrl}" title="Copy"><i class="fas fa-copy"></i></button>
+            `;
+            historyList.appendChild(div);
+        });
+
+        // Use the new copy logic for history items
+        document.querySelectorAll('.copy-history-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                copyText(this.getAttribute('data-url'), this);
+            });
+        });
+        
+        setupRippleEffect();
+    }
+
+    clearHistoryBtn.addEventListener('click', () => {
+        linkHistory = [];
+        localStorage.removeItem('tinyLinksHistory');
+        renderHistory();
+    });
 });

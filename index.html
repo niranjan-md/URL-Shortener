@@ -5,162 +5,173 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>Tiny Links | by NiMD</title>
-    <meta name="description" content="Shorten long, bulky links effortlessly with this beautifully designed and feature-rich URL shortener. Make your links compact, shareable, and visually appealing using is.gd or v.gd, all with a simple and ad-free experience.">
+    <meta name="description" content="Shorten long, bulky links effortlessly with this beautifully designed URL shortener.">
     <meta name="author" content="NiMD">
-    <meta name="robots" content="index, follow">
-    <meta name="language" content="en">
-    <meta name="theme-color" content="#2c2f33" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#ff8ba7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1a1b1e" media="(prefers-color-scheme: dark)">
+    <meta name="theme-color" content="#fffcfd" media="(prefers-color-scheme: light)">
     
-    <!-- Open Graph / Facebook Meta Tags -->
-    <meta property="og:title" content="Tiny Links | by NiMD">
-    <meta property="og:description" content="An awesomely designed and feature rich URL shortener for your big bulky links and make it cute usnig is.gd or v.gd">
-    <meta property="og:image" content="https://tiny.nimd.me/assets/fav.png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:url" content="https://tiny.nimd.me">
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="Tiny Links URL Shortener">
-    
-    <!-- Twitter Meta Tags -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Tiny Links | by NiMD">
-    <meta name="twitter:description" content="An awesomely designed and feature rich URL shortener for your big bulky links and make it cute usnig is.gd or v.gd">
-    <meta name="twitter:image" content="https://tiny.nimd.me/assets/fav.png">
-    
-    <!-- Favicon and App Icons -->
     <link rel="icon" type="image/png" sizes="32x32" href="assets/fav.png">
-    <meta name="apple-mobile-web-app-title" content="Tiny Links | by NiMD">
-    <meta name="application-name" content="Tiny Links | by NiMD">
-    
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://tiny.nimd.me">
-
-    
     <link rel="stylesheet" href="styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
     
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="theme-toggle">
         <input type="checkbox" id="theme-switch">
-        <label for="theme-switch" class="switch-label">
-            <i class="fas fa-moon"></i>
-            <i class="fas fa-sun"></i>
-            <span class="toggle-ball"></span>
+        <label for="theme-switch" class="switch-label" title="Toggle Theme">
+            <span class="toggle-ball">
+                <i class="fas fa-sun icon-sun"></i>
+                <i class="fas fa-moon icon-moon"></i>
+            </span>
         </label>
     </div>
 
     <div class="container">
         <header>
             <div class="logo">
-                <img src="assets/fav.png" alt="Tiny Links Logo" width="60">
-                <h1>&nbspTiny Links</h1>
+                <img src="assets/fav.png" alt="Tiny Links Logo" class="logo-img">
+                <h1>Tiny Links</h1>
             </div>
-            <p class="tagline">Make your links adorably small!</p>
+            <p class="tagline">Make your links adorably small.</p>
         </header>
 
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="shorten">Shorten URL</button>
-            <button class="tab-btn" data-tab="lookup">Lookup URL</button>
-        </div>
+        <div class="app-window">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="shorten"><i class="fas fa-compress-alt"></i> Shorten</button>
+                <button class="tab-btn" data-tab="lookup"><i class="fas fa-search"></i> Lookup</button>
+            </div>
 
-        <div class="tab-content active" id="shorten-tab">
-            <div class="card">
-                <h2>Shorten Your URL</h2>
+            <div class="tab-content active" id="shorten-tab">
                 <form id="url-form">
-                    <div class="input-group">
-                        <input type="url" id="long-url" placeholder="Enter your long URL" required
-                            pattern="https?://.+" title="Please enter a valid URL starting with http:// or https://">
-                        <button type="submit" class="btn primary">Shorten</button>
-                    </div>
-                    <div class="service-toggle">
-                        <div class="toggle-label">Choose service:</div>
-                        <div class="radio-group">
-                          <input type="radio" id="service-isgd" name="service" value="is.gd" checked><label for="service-isgd">is.gd</label>&nbsp&nbsp&nbsp
-                          <input type="radio" id="service-vgd" name="service" value="v.gd"><label for="service-vgd">v.gd</label>
+                    <div class="options-container">
+                        <div class="service-toggle">
+                            <span class="toggle-label">Provider:</span>
+                            <div class="radio-group">
+                                <label class="radio-card" data-tooltip="Fast, standard short links.">
+                                    <input type="radio" name="service" value="is.gd" checked>
+                                    <span class="radio-content">is.gd</span>
+                                </label>
+                                <label class="radio-card" data-tooltip="Shows a preview page before redirecting.">
+                                    <input type="radio" name="service" value="v.gd">
+                                    <span class="radio-content">v.gd</span>
+                                </label>
+                                <label class="radio-card" data-tooltip="Highly reliable classic provider.">
+                                    <input type="radio" name="service" value="tinyurl">
+                                    <span class="radio-content">TinyURL</span>
+                                </label>
+                            </div>
                         </div>
+
+                        <div class="alias-toggle-container">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="custom-alias-toggle">
+                                <label for="custom-alias-toggle">Custom alias</label>
+                            </div>
+                            <div class="custom-alias-wrapper" id="alias-wrapper">
+                                <div class="custom-alias">
+                                    <span class="prefix" id="service-prefix">is.gd/</span>
+                                    <input type="text" id="custom-alias" placeholder="my-custom-link" pattern="[A-Za-z0-9_-]+" title="Only letters, numbers, hyphens and underscores allowed">
+                                </div>
+                            </div>
                         </div>
-                    <div class="checkbox-group">
-                        <input type="checkbox" id="custom-alias-toggle">
-                        <label for="custom-alias-toggle">Use custom alias</label>
                     </div>
-                    <div class="input-group custom-alias" style="display:none">
-                        <input type="text" id="custom-alias" placeholder="Enter custom alias"
-                            pattern="[A-Za-z0-9_-]+" title="Only letters, numbers, hyphens and underscores allowed">
+
+                    <div class="input-group main-input">
+                        <div class="input-wrapper">
+                            <i class="fas fa-link input-icon"></i>
+                            <input type="text" id="long-url" placeholder="Paste your long URL here (e.g., google.com)" required>
+                        </div>
+                        <button type="submit" class="btn primary btn-animate">Shorten <i class="fas fa-arrow-right"></i></button>
                     </div>
                 </form>
 
-                <div class="result-container" style="display:none">
-                    <h3>Your shortened URL:</h3>
-                    <div class="shortened-url-container">
-                        <a id="shortened-url" target="_blank" rel="noopener"></a>
-                        <button id="copy-btn" class="btn secondary">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="copy-toast" id="copy-toast">
-                        <i class="fas fa-check-circle"></i> URL copied to clipboard!
+                <div class="loader" id="shorten-loader" style="display:none">
+                    <div class="spinner"></div>
+                    <span>Generating magic...</span>
+                </div>
+
+                <div class="result-container" id="shorten-result" style="display:none">
+                    <div class="success-banner"><i class="fas fa-check-circle"></i> URL Shortened Successfully!</div>
+                    
+                    <div class="result-card">
+                        <div class="qr-code-wrapper" id="qrcode"></div>
+                        <div class="result-details">
+                            <p class="result-label">Your tiny link</p>
+                            <div class="url-action-group">
+                                <a id="shortened-url" target="_blank" rel="noopener"></a>
+                                <button id="copy-btn" class="icon-btn btn-animate" title="Copy to clipboard"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="error-container" style="display:none">
-                    <div class="error-message">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span id="error-text"></span>
+                <div class="error-container" id="shorten-error" style="display:none">
+                    <i class="fas fa-exclamation-circle"></i> <span id="error-text"></span>
+                </div>
+            </div>
+
+            <div class="tab-content" id="lookup-tab">
+                <form id="lookup-form">
+                    <div class="input-group main-input">
+                        <div class="input-wrapper">
+                            <i class="fas fa-search input-icon"></i>
+                            <input type="text" id="short-url" placeholder="Paste short URL (is.gd / v.gd)" required>
+                        </div>
+                        <button type="submit" class="btn primary btn-animate">Lookup</button>
+                    </div>
+                    <p class="helper-text">Note: TinyURL lookup is not publicly supported by their free API.</p>
+                </form>
+
+                <div class="loader" id="lookup-loader" style="display:none">
+                    <div class="spinner"></div>
+                    <span>Searching database...</span>
+                </div>
+
+                <div class="result-container" id="lookup-result" style="display:none">
+                    <div class="result-card">
+                        <div class="result-details full-width">
+                            <p class="result-label">Original URL Destination</p>
+                            <div class="url-action-group">
+                                <a id="original-url" target="_blank" rel="noopener"></a>
+                                <button id="copy-original-btn" class="icon-btn btn-animate"><i class="fas fa-copy"></i></button>
+                            </div>
+                            <div class="stats-grid">
+                                <div class="stat-box" id="creation-date-box" style="display:none">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <div>
+                                        <span class="stat-label">Created On</span>
+                                        <span class="stat-value" id="creation-date"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="loader" style="display:none">
-                    <div class="loading-bar"></div>
+                <div class="error-container" id="lookup-error" style="display:none">
+                    <i class="fas fa-exclamation-circle"></i> <span id="lookup-error-text"></span>
                 </div>
             </div>
         </div>
 
-        <div class="tab-content" id="lookup-tab">
-            <div class="card">
-                <h2>Lookup Shortened URL</h2>
-                <form id="lookup-form">
-                    <div class="input-group">
-                        <input type="url" id="short-url" placeholder="Enter shortened URL (v.gd or is.gd)" required
-                            pattern="https?://(v\.gd|is\.gd)/.+" title="Please enter a valid v.gd or is.gd URL">
-                        <button type="submit" class="btn primary">Lookup</button>
-                    </div>
-                </form>
-
-                <div class="lookup-result-container" style="display:none">
-                    <h3>Original URL:</h3>
-                    <div class="original-url-container">
-                        <a id="original-url" target="_blank" rel="noopener"></a>
-                        <button id="copy-original-btn" class="btn secondary">
-                            <i class="fas fa-copy"></i>
-                        </button>
-                    </div>
-                    <div class="creation-info">
-                        <p id="creation-date"></p>
-                        <p id="total-clicks"></p>
-                    </div>
-                </div>
-
-                <div class="lookup-error-container" style="display:none">
-                    <div class="error-message">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <span id="lookup-error-text"></span>
-                    </div>
-                </div>
-
-                <div class="lookup-loader" style="display:none">
-                    <div class="loading-bar"></div>
-                </div>
+        <div class="history-container" id="history-container" style="display:none">
+            <div class="history-header">
+                <h3><i class="fas fa-history"></i> Recent Links</h3>
+                <button id="clear-history" class="text-btn">Clear</button>
             </div>
+            <div class="history-list" id="history-list"></div>
         </div>
 
         <footer>
-            <p>Made with <i class="fas fa-heart"></i> by <a href="https://nimd.me" target="_blank" rel="noopener">MD</a> | Using <a href="https://go.nimd.me/isgd-api-ref" target="_blank" rel="noopener">is.gd</a> and <a href="https://go.nimd.me/vgd-api-ref" target="_blank" rel="noopener">v.gd</a> APIs</p>
-            <p class="small">This is for educational purposes only. Please respect the terms of service.</p>
+            <p>Made with <i class="fas fa-heart"></i> by <a href="https://nimd.me" target="_blank">MD</a></p>
+            <p class="small">Powered by <a href="https://go.nimd.me/isgd-api-ref" target="_blank">is.gd</a>, <a href="https://go.nimd.me/vgd-api-ref" target="_blank">v.gd</a> & <a href="https://tinyurl.com/" target="_blank">TinyURL</a> APIs</p>
         </footer>
     </div>
+
+    <div class="toast" id="toast"><i class="fas fa-check"></i> Copied to clipboard!</div>
 
     <script src="script.js"></script>
 </body>
