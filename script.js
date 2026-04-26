@@ -42,6 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Initialization ---
     initTheme();
+    initProvider(); // Restore saved provider choice
     renderHistory();
     setupGlobalRipple();
 
@@ -74,10 +75,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Update prefix when switching services
+    // Update prefix when switching services & Save to LocalStorage
     serviceRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             let val = this.value;
+            
+            // Save choice
+            localStorage.setItem('tinyLinksProvider', val);
+            
+            // Update UI prefix
             if(val === 'tinyurl') val = 'tinyurl.com';
             servicePrefix.textContent = val + '/';
         });
@@ -199,7 +205,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Bulletproof Copy Handlers ---
     
-    // Main result copy buttons
     document.getElementById('copy-btn').addEventListener('click', function() { 
         copyText(shortenedUrl.textContent, this); 
     });
@@ -208,7 +213,6 @@ document.addEventListener('DOMContentLoaded', function() {
         copyText(originalUrl.textContent, this); 
     });
 
-    // History copy buttons (Using event delegation so dynamic buttons always work)
     historyList.addEventListener('click', function(e) {
         const btn = e.target.closest('.copy-history-btn');
         if (btn) {
@@ -216,7 +220,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Core copy function with file:// fallback
     async function copyText(text, btnElement) {
         if (!text) return;
         
@@ -236,7 +239,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         };
 
-        // Try modern clipboard API first
         if (navigator.clipboard && window.isSecureContext) {
             try {
                 await navigator.clipboard.writeText(text);
@@ -247,10 +249,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
-        // Fallback for file:// execution or older browsers
         const textArea = document.createElement("textarea");
         textArea.value = text;
-        // Make it invisible
         textArea.style.position = "fixed";
         textArea.style.top = "-999999px";
         textArea.style.left = "-999999px";
@@ -278,6 +278,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // NEW: Restore saved provider
+    function initProvider() {
+        const savedProvider = localStorage.getItem('tinyLinksProvider');
+        if (savedProvider) {
+            const radioToSelect = document.querySelector(`input[name="service"][value="${savedProvider}"]`);
+            if (radioToSelect) {
+                radioToSelect.checked = true;
+                
+                // Set the correct prefix UI visually
+                let val = savedProvider;
+                if(val === 'tinyurl') val = 'tinyurl.com';
+                servicePrefix.textContent = val + '/';
+            }
+        }
+    }
+
     function isValidUrl(string) {
         try { new URL(string); return true; } catch (_) { return false; }
     }
@@ -299,7 +315,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
-    // Fixed Ripple Logic (Non-destructive Event Delegation)
     function setupGlobalRipple() {
         document.body.addEventListener('mousedown', function(e) {
             const btn = e.target.closest('.btn-animate');
