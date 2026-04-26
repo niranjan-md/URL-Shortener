@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Initialization ---
     initTheme();
     renderHistory();
-    setupRippleEffect();
+    setupGlobalRipple();
 
     // --- Event Listeners ---
     
@@ -197,7 +197,9 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // --- Enhanced Copy Handlers ---
+    // --- Bulletproof Copy Handlers ---
+    
+    // Main result copy buttons
     document.getElementById('copy-btn').addEventListener('click', function() { 
         copyText(shortenedUrl.textContent, this); 
     });
@@ -206,29 +208,65 @@ document.addEventListener('DOMContentLoaded', function() {
         copyText(originalUrl.textContent, this); 
     });
 
+    // History copy buttons (Using event delegation so dynamic buttons always work)
+    historyList.addEventListener('click', function(e) {
+        const btn = e.target.closest('.copy-history-btn');
+        if (btn) {
+            copyText(btn.getAttribute('data-url'), btn);
+        }
+    });
+
+    // Core copy function with file:// fallback
     async function copyText(text, btnElement) {
         if (!text) return;
-        try {
-            await navigator.clipboard.writeText(text);
+        
+        const triggerSuccessUI = () => {
             showToast();
-            
-            // Inline visual confirmation on the button itself
             if (btnElement) {
                 const icon = btnElement.querySelector('i');
                 if (icon) {
                     const originalClass = icon.className;
                     icon.className = 'fas fa-check';
                     icon.style.color = 'var(--success)';
-                    
                     setTimeout(() => {
                         icon.className = originalClass;
                         icon.style.color = '';
                     }, 2000);
                 }
             }
-        } catch (err) {
-            console.error('Failed to copy', err);
+        };
+
+        // Try modern clipboard API first
+        if (navigator.clipboard && window.isSecureContext) {
+            try {
+                await navigator.clipboard.writeText(text);
+                triggerSuccessUI();
+                return;
+            } catch (err) {
+                console.warn('Modern clipboard failed, falling back...');
+            }
         }
+        
+        // Fallback for file:// execution or older browsers
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        // Make it invisible
+        textArea.style.position = "fixed";
+        textArea.style.top = "-999999px";
+        textArea.style.left = "-999999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            triggerSuccessUI();
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+            alert("Failed to copy link automatically. Please select the text and copy manually.");
+        }
+        
+        textArea.remove();
     }
 
     // --- Helper Functions ---
@@ -261,24 +299,23 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => toast.classList.remove('show'), 2500);
     }
 
-    function setupRippleEffect() {
-        document.querySelectorAll('.btn-animate').forEach(btn => {
-            const newBtn = btn.cloneNode(true);
-            btn.parentNode.replaceChild(newBtn, btn);
+    // Fixed Ripple Logic (Non-destructive Event Delegation)
+    function setupGlobalRipple() {
+        document.body.addEventListener('mousedown', function(e) {
+            const btn = e.target.closest('.btn-animate');
+            if (!btn) return;
+
+            const rect = btn.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
             
-            newBtn.addEventListener('click', function(e) {
-                const rect = e.currentTarget.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                
-                const ripple = document.createElement('span');
-                ripple.className = 'ripple';
-                ripple.style.left = `${x}px`;
-                ripple.style.top = `${y}px`;
-                
-                this.appendChild(ripple);
-                setTimeout(() => ripple.remove(), 600);
-            });
+            const ripple = document.createElement('span');
+            ripple.className = 'ripple';
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            
+            btn.appendChild(ripple);
+            setTimeout(() => ripple.remove(), 600);
         });
     }
 
@@ -314,15 +351,6 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             historyList.appendChild(div);
         });
-
-        // Use the new copy logic for history items
-        document.querySelectorAll('.copy-history-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                copyText(this.getAttribute('data-url'), this);
-            });
-        });
-        
-        setupRippleEffect();
     }
 
     clearHistoryBtn.addEventListener('click', () => {
